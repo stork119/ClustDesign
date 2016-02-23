@@ -6,7 +6,6 @@ Metamodel::~Metamodel()
 {
 }
 
-
 /** SOLUTION **/
 
 void Metamodel::push_odesolve_y(double _t, state_type _y) {

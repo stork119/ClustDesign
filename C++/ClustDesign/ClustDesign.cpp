@@ -15,9 +15,9 @@
 int main() {
 	
 	/* Model input */
-	parameters_type p = { (x_type) 100.00, (x_type) 20.00, (x_type) 3.00,(x_type)  0.60 };
-	state_type y = { 501, 1005 };// { p[0] / p[2], (p[0] * p[1]) / (p[2] * p[3]) }; // initial conditions
-	state_type dydt = { 0 , 0 };
+	parameters_type p = {  100.f, 20.f,  3.f, 0.6f };
+	state_type y = { 501.f, 1005.f };// { p[0] / p[2], (p[0] * p[1]) / (p[2] * p[3]) }; // initial conditions
+	state_type dydt = { 0.f , 0.f };
 	double dt = 0.1;
 
 	/* Time */
@@ -34,28 +34,6 @@ int main() {
 	Model &m = Model(y, dydt, p, trange, dt);
 
 	compute_sensitvity_matrix(m);
-
-	
-
-	/*runge_kutta4< state_type > stepper;
-	integrate_times(stepper,
-		m,
-		y,
-		trange,
-		dt,
-		[&](const state_type &_y, const double _t) {m.observer_odesolve_y(_y, _t); });
-
-	runge_kutta4< state_type > stepper2;
-
-	for (int i = 0; i < m.get_parameters_number(); ++i) {
-		integrate_times(stepper2,
-			[&](const state_type &_z, state_type &_dzdt, double _t) {odesolve_dzdt(_z, _dzdt, _t, m, i); },
-			dydt,
-			trange,
-			dt,
-			[&](const state_type &_z, const double _t) {m.observer_odesolve_dydp(_z, _t, i); });
-	}*/
-
 
 	m.write_odesolve_y("logs/odesolve_1.csv");
 	m.write_sensitivity_matrix("logs/sensitivity_matrix_1.csv");

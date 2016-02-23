@@ -29,14 +29,14 @@ public:
 	~Metamodel();
 
 	/* GETTERS & SETTERS */
-	inline state_type& get_y()
+	inline state_type get_y()
 	{
-		return state_type(y);
+		return y;
 	};
 
-	inline state_type& get_dydt()
+	inline state_type get_dydt()
 	{
-		return state_type(dydt);
+		return dydt;
 	};
 
 	inline std::vector<double>& get_trange()
