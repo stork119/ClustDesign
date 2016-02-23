@@ -1,0 +1,9 @@
+ClustDesign/*
+*.vcxproj*
+x64/*
+ipch/*
+
+
+*.csv
+logs/*
+

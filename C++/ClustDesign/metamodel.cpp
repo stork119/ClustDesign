@@ -125,10 +125,10 @@ void Metamodel::write_sensitivity_matrix(string filename)
 /* OBSERVERS */
 void Metamodel::observer_odesolve_y(const state_type &x, const double t)
 {
-	push_odesolve_y(t, x);
+	push_odesolve_y(t, state_type(x));
 }
 
 void Metamodel::observer_odesolve_dydp(const state_type &z, const double t, int p_ind)
 {
-	push_odesolve_dydp(p_ind, t, z);
+	push_odesolve_dydp(p_ind, t, state_type(z));
 }

@@ -1,7 +1,7 @@
 #include "model.h"
 
 
-void Model::operator() (const state_type &_y, state_type &_dydt, double _t) {
+void Model::operator() (const state_type &_y, state_type &_dydt, double _t) const {
 	_dydt[0] = p[0] - p[2] * _y[0];
 	_dydt[1] = p[1] * _y[0] - p[3] * _y[1];
 }
