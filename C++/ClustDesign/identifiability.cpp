@@ -3,8 +3,8 @@
 
 void compute_sensitvity_matrix(Model &m)
 {
-
-	state_type &y = m.get_y();
+	state_type _y = m.get_y();
+	state_type &y = _y;
 	runge_kutta4< state_type > stepper;
 	integrate_times(stepper,
 		m,
@@ -16,7 +16,8 @@ void compute_sensitvity_matrix(Model &m)
 	runge_kutta4< state_type > stepper2;
 
 	for (int i = 0; i < m.get_parameters_number(); ++i) {
-		state_type &dydt = m.get_dydt();
+		state_type _dydt = m.get_dydt();
+		state_type &dydt = _dydt;
 		integrate_times(stepper2,
 			[&](const state_type &_z, state_type &_dzdt, double _t) {odesolve_dzdt(_z, _dzdt, _t, m, i); },
 			dydt,

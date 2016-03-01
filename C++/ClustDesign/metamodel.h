@@ -8,12 +8,11 @@
 class Metamodel
 {
 protected:
-	parameters_type p;
-	double dt;
 	state_type y; /* initial */
-	state_type dydt; /* initial */
+	state_type dydt; /* initial */	
+	parameters_type p;
 	std::vector<double> trange;
-
+	double dt;
 
 	vector<pair<double, state_type>>  odesolve_y;
 	vector<pair<pair<double, int>, state_type>>  odesolve_dydp;

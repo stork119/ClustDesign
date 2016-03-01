@@ -2,7 +2,7 @@ ClustDesign/*
 *.vcxproj*
 x64/*
 ipch/*
-
+*.o
 
 *.csv
 logs/*
