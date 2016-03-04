@@ -49,10 +49,10 @@ public:
 	};
 
 	/* VIRTUAL */
-	virtual void operator() (const state_type &_y, state_type &_dydt, double _t) const {};
+	virtual void operator() (const state_type &_y, state_type &_dydt, double _t) const;
 
-	virtual matrix_type jacobiandpar(const state_type &_y, const double _t) { return matrix_type(); };
-	virtual matrix_type jacobiandvar(const state_type &_y, const double _t) { return matrix_type(); };
+	virtual matrix_type jacobiandpar(const state_type &_y, const double _t);
+	virtual matrix_type jacobiandvar(const state_type &_y, const double _t);
 
 	/* OTHER */
 	void push_odesolve_y(double _t, state_type _x);

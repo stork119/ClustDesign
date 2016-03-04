@@ -25,12 +25,19 @@ RINSIDEINCL := 		$(shell echo 'RInside:::CxxFlags()' | $(R_HOME)/bin/R --vanilla
 RINSIDELIBS := 		$(shell echo 'RInside:::LdFlags()'  | $(R_HOME)/bin/R --vanilla --slave)
 
 
+## R
+
+##RINCL -L$(R_HOME)/bin -lR
+
+## BOOST
+BOOSTLIBS=	-lboost_filesystem -lboost_system
+
 ## compiler etc settings used in default make rules
 CXX := 			$(shell $(R_HOME)/bin/R CMD config CXX)
 CPPFLAGS := 		-Wall $(shell $(R_HOME)/bin/R CMD config CPPFLAGS)
 CXXFLAGS := 		$(RCPPFLAGS) $(RCPPINCL) $(RINSIDEINCL) $(shell $(R_HOME)/bin/R CMD config CXXFLAGS) -std=c++11
 LDFLAGS	= 		-s
-LDLIBS := 		$(RLDFLAGS) $(RBLAS) $(RLAPACK) $(RINSIDELIBS) $(RCPPLIBS)
+LDLIBS := 		$(RLDFLAGS) $(RBLAS) $(RLAPACK) $(RINSIDELIBS) $(RCPPLIBS) $(BOOSTLIBS)
 CC := 			$(shell $(R_HOME)/bin/R CMD config CXX)
 
 SRCS=ClustDesign.cpp  metamodel.cpp models/GE/model.cpp identifiability.cpp 

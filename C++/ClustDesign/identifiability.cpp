@@ -18,6 +18,7 @@ void compute_sensitvity_matrix(Model &m)
 	for (int i = 0; i < m.get_parameters_number(); ++i) {
 		state_type _dydt = m.get_dydt();
 		state_type &dydt = _dydt;
+
 		integrate_times(stepper2,
 			[&](const state_type &_z, state_type &_dzdt, double _t) {odesolve_dzdt(_z, _dzdt, _t, m, i); },
 			dydt,
