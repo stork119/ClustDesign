@@ -45,13 +45,15 @@ OBJS=$(subst .cpp,.o, $(SRCS))
 
 
 
-all: ClustDesign
+all: ClustDesign 
+##Main
 
 ClustDesign: $(OBJS)
 	$(CXX) $(LDFLAGS) -o ClustDesign $(OBJS)  $(LDLIBS)
 
-##ClustDesign.o: odeint.h ClustDesign.cpp
-##	$(CXX) $(CXXFLAGS)   -c ClustDesign.cpp
+##Main:	Main.cpp 
+##	PKG_CPPFLAGS="$(RCPPFLAGS) $(RCPPINCL)" PKG_LIBS="$(RLDFLAGS) $(RCPPLIBS)" R CMD SHLIB Main.cpp
+
 
 ClustDesign.o:  ClustDesign.cpp odeint.h models.h identifiability.h models/GE/model.h
 	$(CXX) $(CXXFLAGS)   -c ClustDesign.cpp

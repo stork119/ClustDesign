@@ -25,7 +25,8 @@ public:
 		parameters_type &_p,
 		std::vector<double> &_trange,
 		double _dt) : y(_y), dydt(_dydt), p(_p), trange(_trange), dt(_dt) {};
-	~Metamodel();
+
+	virtual ~Metamodel() {};
 
 	/* GETTERS & SETTERS */
 	inline state_type get_y()
@@ -49,10 +50,10 @@ public:
 	};
 
 	/* VIRTUAL */
-	virtual void operator() (const state_type &_y, state_type &_dydt, double _t) const;
+	virtual void operator() (const state_type &_y, state_type &_dydt, double _t) const = 0;
 
-	virtual matrix_type jacobiandpar(const state_type &_y, const double _t);
-	virtual matrix_type jacobiandvar(const state_type &_y, const double _t);
+	virtual matrix_type jacobiandpar(const state_type &_y, const double _t) = 0;
+	virtual matrix_type jacobiandvar(const state_type &_y, const double _t) = 0;
 
 	/* OTHER */
 	void push_odesolve_y(double _t, state_type _x);
