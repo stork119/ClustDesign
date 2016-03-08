@@ -43,16 +43,24 @@ CC := 			$(shell $(R_HOME)/bin/R CMD config CXX)
 SRCS=ClustDesign.cpp  metamodel.cpp models/GE/model.cpp identifiability.cpp 
 OBJS=$(subst .cpp,.o, $(SRCS))
 
+WORK_PATH=/cygdrive/d/KN/ClustSense/ClustDesign/C++/ClustDesign/
+GE_PATH=$(WORK_PATH)models/GE/
 
 
-all: ClustDesign 
-##Main
+all: ClustDesign Main
+
+##ar rvs libzosia.a zosia.o
 
 ClustDesign: $(OBJS)
 	$(CXX) $(LDFLAGS) -o ClustDesign $(OBJS)  $(LDLIBS)
 
-##Main:	Main.cpp 
-##	PKG_CPPFLAGS="$(RCPPFLAGS) $(RCPPINCL)" PKG_LIBS="$(RLDFLAGS) $(RCPPLIBS)" R CMD SHLIB Main.cpp
+
+Main:	Main.cpp zosia.o
+	PKG_CPPFLAGS="$(CXXFLAGS) -I$(WORK_PATH)identifiability.h -I$(WORK_PATH)models.h  -I$(WORK_PATH)odeint.h" PKG_LIBS="$(LDFLAGS) $(LDLBIS) -L$(WORK_PATH) -lmetamodel -lidentifiability -L$(GE_PATH) -lmodel" R CMD SHLIB Main.cpp
+
+
+##Main.o: Main.cpp zosia.h
+##	$(CXX) $(CXXFLAGS)  -c Main.cpp
 
 
 ClustDesign.o:  ClustDesign.cpp odeint.h models.h identifiability.h models/GE/model.h
