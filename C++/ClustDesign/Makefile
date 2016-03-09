@@ -1,4 +1,4 @@
-R_HOME=$(shell R RHOME )
+R_HOME=C:/R/R-3.2.3
 ## You may have to set this to one of the two values below to enforce a  particular
 ## architecture in case the autodetection in the next line does not work correctly
 ##R_ARCH :=		--arch $(shell echo 'cat(.Platform$$r_arch)' | R --vanilla --slave)
@@ -40,44 +40,72 @@ LDFLAGS	= 		-s
 LDLIBS := 		$(RLDFLAGS) $(RBLAS) $(RLAPACK) $(RINSIDELIBS) $(RCPPLIBS) $(BOOSTLIBS)
 CC := 			$(shell $(R_HOME)/bin/R CMD config CXX)
 
-SRCS=ClustDesign.cpp  metamodel.cpp models/GE/model.cpp identifiability.cpp 
+SRCS=ClustDesign.cpp ClustDesignRcpp.cpp metamodel.cpp models/GE/model.cpp identifiability.cpp 
 OBJS=$(subst .cpp,.o, $(SRCS))
 
-WORK_PATH=/cygdrive/d/KN/ClustSense/ClustDesign/C++/ClustDesign/
-GE_PATH=$(WORK_PATH)models/GE/
+## CLUST DESIGN 
+
+CLUSTDESIGNDIR=D:/KN/ClustSense/ClustDesign/C++/ClustDesign/
+CLUSTDESIGNDIRGE=$(CLUSTDESIGNDIR)models/GE/
+
+CLUSTDESIGNLIBS=  -L$(CLUSTDESIGNDIR) -lmetamodel -lidentifiability -L$(CLUSTDESIGNDIRGE) -lmodel
+
+## R CMD SHLIB
+PKG_CPPFLAGS=$(CXXFLAGS) -I$(CLUSTDESIGNDIR)
+PKG_LIBS=$(LDFLAGS) $(LDLBIS) $(CLUSTDESIGNLIBS)
+
+## STATIC LIBRARIES
+STATICCMD=ar rvs
+
+## ALL
+
+all: CPP RCPP
 
 
-all: ClustDesign Main
-
-##ar rvs libzosia.a zosia.o
-
-ClustDesign: $(OBJS)
+CPP: $(OBJS) 
 	$(CXX) $(LDFLAGS) -o ClustDesign $(OBJS)  $(LDLIBS)
 
 
-Main:	Main.cpp zosia.o
-	PKG_CPPFLAGS="$(CXXFLAGS) -I$(WORK_PATH)identifiability.h -I$(WORK_PATH)models.h  -I$(WORK_PATH)odeint.h" PKG_LIBS="$(LDFLAGS) $(LDLBIS) -L$(WORK_PATH) -lmetamodel -lidentifiability -L$(GE_PATH) -lmodel" R CMD SHLIB Main.cpp
+RCPP: ClustDesignRcpp.cpp libidentifiability.a libmetamodel.a $(CLUSTDESIGNDIRGE)libmodel.a   
+	PKG_CPPFLAGS="$(PKG_CPPFLAGS)" PKG_LIBS="$(PKG_LIBS)" R CMD SHLIB ClustDesignRcpp.cpp
 
 
-##Main.o: Main.cpp zosia.h
-##	$(CXX) $(CXXFLAGS)  -c Main.cpp
-
-
-ClustDesign.o:  ClustDesign.cpp odeint.h models.h identifiability.h models/GE/model.h
+ClustDesign.o:  ClustDesign.cpp ClustDesignRcpp.o  odeint.h models.h identifiability.h models/GE/model.h
 	$(CXX) $(CXXFLAGS)   -c ClustDesign.cpp
 
-Identifiability.o: identifiability.h identifiability.cpp odeint.h models.h metamodel.h
+ClustDesignRcpp.o:   ClustDesignRcpp.h ClustDesignRcpp.cpp odeint.h models.h identifiability.h models/GE/model.h
+	$(CXX) $(CXXFLAGS)   -c ClustDesignRcpp.cpp
+
+
+libidentifiability.a: identifiability.o
+	$(STATICCMD) libidentifiability.a identifiability.o
+
+identifiability.o: identifiability.h identifiability.cpp odeint.h models.h metamodel.h
 	$(CXX) $(CXXFLAGS)   -c identifiability.cpp
+
+libmetamodel.a: metamodel.o
+	$(STATICCMD) libmetamodel.a metamodel.o
+
 
 metamodel.o: metamodel.h metamodel.cpp odeint.h
 	$(CXX) $(CXXFLAGS)   -c metamodel.cpp
 
-models/GE/model.o: models/GE/model.h models/GE/model.cpp odeint.h metamodel.h
-	$(CXX) $(CXXFLAGS)   -o models/GE/model.o -c models/GE/model.cpp 
+
+$(CLUSTDESIGNDIRGE)libmodel.a: $(CLUSTDESIGNDIRGE)model.o
+	$(STATICCMD) $(CLUSTDESIGNDIRGE)libmodel.a $(CLUSTDESIGNDIRGE)model.o
+
+$(CLUSTDESIGNDIRGE)model.o: $(CLUSTDESIGNDIRGE)model.h $(CLUSTDESIGNDIRGE)model.cpp odeint.h metamodel.h
+	$(CXX) $(CXXFLAGS)   -o $(CLUSTDESIGNDIRGE)model.o -c $(CLUSTDESIGNDIRGE)model.cpp 
 
 
 clean:
-	rm $(OBJS) *.exe
+	@rm -rf $(OBJS) *.exe *.dll *.a 2>/dev/null || true
+
+clean-cpp:
+	@rm -rf $(OBJS) *.exe 2>/dev/null || true
+
+cleani-rcpp:
+	@rm -rf $(OBJS) *.dll *.a 2>/dev/null || true
 
 print-%:
 	@echo '$*=$($*)'

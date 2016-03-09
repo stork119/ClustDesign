@@ -1,21 +1,11 @@
 #include <fstream>
 #include <iostream>
-#include <algorithm>
-
-#include <vector>
-#include <string>
-
-#include <Rcpp.h>
-#include <R.h>
 
 #include <boost/filesystem.hpp>
 
 /*** TODO Model including !!!***/
-#include "models.h"
+#include "ClustDesignRcpp.h"
 #include "odeint.h"
-#include "identifiability.h"
-
-
 
 int main(int argc, char *argv[]) {
 
@@ -33,10 +23,10 @@ int main(int argc, char *argv[]) {
 	
 	}
 
-	/* Model input */
-	parameters_type p = {  10.f, 20.f,  3.f, 0.6f };
-	state_type y = { 501.f, 1005.f };// { p[0] / p[2], (p[0] * p[1]) / (p[2] * p[3]) }; // initial conditions
-	state_type dydt = { 0.f , 0.f };
+ 	/* Model input */
+	vector<double> p = {  10.f, 20.f,  3.f, 0.6f };
+	vector<double> y = { 501.f, 1005.f };// { p[0] / p[2], (p[0] * p[1]) / (p[2] * p[3]) }; // initial conditions
+	vector<double> dydt = { 0.f , 0.f };
 	double dt = 0.1;
 
 	/* Time */
@@ -50,12 +40,14 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	Model m = Model(y, dydt, p, trange, dt);
-
-	compute_sensitvity_matrix(m);
-
-	m.write_odesolve_y(dir_odesolve);
-	m.write_sensitivity_matrix(dir_sm);
+	ClustDesign(
+		p,
+	 	y,
+		dydt,
+		dt, 
+		trange,
+		dir_odesolve,
+		dir_sm);
 
 	return 0;
 }

@@ -116,6 +116,27 @@ void Metamodel::write_sensitivity_matrix(string filename)
 }
 
 
+/* write sensitivity matrix */
+void Metamodel::create_sensitivity_matrix()
+{
+	std::sort(odesolve_dydp.begin(), odesolve_dydp.end());
+
+	for (vector<pair<pair<double, int>, state_type>>::iterator it = odesolve_dydp.begin(); it != odesolve_dydp.end(); it += get_parameters_number())
+	{
+		for (int i_var = 0; i_var < state_value; ++i_var)
+		{
+			vector<double> sm_row;
+			for (int i_par = 0; i_par < get_parameters_number(); ++i_par)
+			{
+				sm_row.push_back((it->second)[i_var] * get_parameter(i_par));
+				++it;
+			}
+			sm.push_back(sm_row);
+			it -= get_parameters_number();
+		}
+	}
+}
+
 /* OBSERVERS */
 void Metamodel::observer_odesolve_y(const state_type &x, const double t)
 {

@@ -3,6 +3,8 @@ ClustDesign/*
 x64/*
 ipch/*
 *.o
+*.a
+*.dll
 
 *.csv
 logs/*

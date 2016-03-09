@@ -16,6 +16,8 @@ protected:
 
 	vector<pair<double, state_type>>  odesolve_y;
 	vector<pair<pair<double, int>, state_type>>  odesolve_dydp;
+	vector<vector<double> >  sm;
+
 
 public:
 	//Metamodel(parameters_type _p) : p(_p) {};
@@ -49,6 +51,13 @@ public:
 		return dt;
 	};
 
+	inline std::vector<vector<double> > get_sm()
+	{
+		return sm;
+	};
+
+
+
 	/* VIRTUAL */
 	virtual void operator() (const state_type &_y, state_type &_dydt, double _t) const = 0;
 
@@ -64,6 +73,9 @@ public:
 	void push_odesolve_dydp(int _par_num, double _t, state_type _x);
 	vector<pair<pair<double, int>, state_type>> get_odesolve_dydp();
 	void write_sensitivity_matrix(string filename);
+
+	void create_sensitivity_matrix();
+
 
 	/* Parameters */
 	void set_parameter(int i, x_type _p);
