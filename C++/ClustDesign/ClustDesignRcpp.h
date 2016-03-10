@@ -22,7 +22,8 @@ vector<vector<double> > ClustDesign(
 	double dt, 
 	vector<double> trange,
 	string dir_odesolve,
-	string dir_sm);
+	string dir_sm,
+	bool save_solutions);
 
 
 	

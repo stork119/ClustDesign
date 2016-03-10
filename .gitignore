@@ -14,3 +14,7 @@ vignettes/*.pdf
 
 #Output
 /Output/*
+
+#vim
+*.swp
+*.swo

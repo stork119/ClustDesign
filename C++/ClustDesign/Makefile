@@ -1,4 +1,5 @@
-R_HOME=C:/R/R-3.2.3
+##R_HOME=C:/R/R-3.2.3
+R_HOME=$(shell R RHOME)
 ## You may have to set this to one of the two values below to enforce a  particular
 ## architecture in case the autodetection in the next line does not work correctly
 ##R_ARCH :=		--arch $(shell echo 'cat(.Platform$$r_arch)' | R --vanilla --slave)

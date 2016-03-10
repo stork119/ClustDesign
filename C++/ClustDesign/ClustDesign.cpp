@@ -47,7 +47,8 @@ int main(int argc, char *argv[]) {
 		dt, 
 		trange,
 		dir_odesolve,
-		dir_sm);
+		dir_sm,
+		true);
 
 	return 0;
 }

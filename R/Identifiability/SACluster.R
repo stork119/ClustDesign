@@ -3,9 +3,13 @@
 #####################################
 
 ### checking libraries ###
+require("logging")
+require("spatstat")
+require("fields")
 
-library("spatstat")
-library("fields")
+wd <- dirname(parent.frame(2)$ofile)
+source(paste(wd,"/CanonicalCorrelation/CANCOR.R", sep = ""))
+rm(wd)
 
 #### SMC #### 
 SMC <- function(S      = NULL,
@@ -15,7 +19,8 @@ SMC <- function(S      = NULL,
                 zeta = 1,
                 delta = 0.95,
                 rules.delta = TRUE,
-                K = 1
+                K = 1,
+                dir.output = "~/"
                 ){
   # Description :
   # none
@@ -29,15 +34,34 @@ SMC <- function(S      = NULL,
   # K           - not used
   # rules.delta  - TRUE !
   
-  ### MAIN CODE
+  ### LOGGING
+  removeHandler(names(getLogger()[['handlers']])) 
+  dir.log.folder <- paste(dir.output, "logs/",sep = "")
+  dir.create(dir.log.folder, recursive = TRUE, showWarnings = FALSE) 
+  dir.log.file <- gsub(":", "-",
+                       gsub(" ", "-",
+                            paste(dir.log.folder, Sys.time(), ".log",sep = ""),
+                            fixed = TRUE),
+                       fixed = TRUE)
+
+  basicConfig(level = "FINEST")
+  addHandler(writeToFile, file = dir.log.file)
+  removeHandler('basic.stdout') 
+  
+  
+  ### MAIN CODE  
   if( is.null(S) && is.null(FIM) ){
+    logerror("Enter value of FIM (Fisher Information Matrix) or S (Sensitivity Matrix)")
     stop("Enter value of FIM (Fisher Information Matrix) or S (Sensitivity Matrix)")
   }
   else if( is.null(FIM) ){
+    names.default <- colnames(S)
     FIM <- t(S)%*%S
+    CANCOR <- CANCOR.SM()
   }
   else {
     names.default <- colnames(FIM)
+    CANCOR <- CANCOR.FIM()
   }
   
   if( is.null(labels) ){
@@ -57,8 +81,14 @@ SMC <- function(S      = NULL,
   }
   
   FIM <- FIM[ind,ind]
+  if(CANCOR$type == "SM"){
+    M = S
+  } else {
+    M = FIM
+  }
   
-  val <- list(S   = S,
+  val <- list(M   = M,
+              S   = S,
               S_all = S_all,
               FIM = FIM,
               FIM_all = FIM_all,
@@ -72,18 +102,21 @@ SMC <- function(S      = NULL,
               rules.delta = rules.delta,
               K   = K,
               rules.K = !rules.delta,
-              call = sys.call())
+              call = sys.call(),
+              CANCOR = CANCOR)
   class(val) <- "SMC"
   val
 }
 print.SMC <- function(x,...){
-  cat("SMC :")
-  print(x$FIM)
+  loginfo("FIM")
+  loginfo(paste(x$FIM, sep = " "))
+  loginfo("FIM end")
 }
 
 info.SMC <- function(x,...){
-  cat("SMC :")
-  print(x$FIM)
+  loginfo("FIM")
+  loginfo(paste(x$FIM, sep = " "))
+  loginfo("FIM end")
 }
 
 #### clusterident ####
@@ -103,17 +136,17 @@ clusterident.SMC <- function(x,...) {
   parameters.activate <- 1:n
   parameters.weakness <- rep(x = 0, times = n)
   
-  get_information_cancor <- function(m, c1, c2) {
-    ### TODO wyczyść
-    infcontrol=0.99999
-    ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
-    mean(-log(1-min(infcontrol^2,ccor$cor*ccor$cor)))
-  }
-  
-  get_correlations_cancor <- function(m, c1, c2) {
-    ccor <- cancor(m[,c1], m[,c2], FALSE, FALSE)
-    ccor$cor
-  }
+#   get_information_cancor <- function(m, c1, c2) {
+#     ### TODO wyczyść
+#     infcontrol=0.99999
+#     ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
+#     mean(-log(1-min(infcontrol^2,ccor$cor*ccor$cor)))
+#   }
+#   
+#   get_correlations_cancor <- function(m, c1, c2) {
+#     ccor <- cancor(m[,c1], m[,c2], FALSE, FALSE)
+#     ccor$cor
+#   }
   
   width     <- 0
   stability <- 0
@@ -143,16 +176,17 @@ clusterident.SMC <- function(x,...) {
   cluster.correlation[1:n,1:n] <- sapply(1:n, function(i){
     sapply(1:n, function(j){
       ifelse(i < j, 
-             get_information_cancor(x$FIM,
+             {loginfo(paste(i,j));
+             x$CANCOR$get_information_cancor(x$M,
                                     cluster.elementsrep[i, 1:cluster.sizerep[i]],
-                                    cluster.elementsrep[j, 1:cluster.sizerep[j]]),
+                                    cluster.elementsrep[j, 1:cluster.sizerep[j]])},
              -Inf)
     })
   })
   
   global.correlation <- sapply(1:n, 
                                function(i){
-                                 get_correlations_cancor(x$FIM,
+                                 x$CANCOR$get_correlations_cancor(x$M,
                                                          i,
                                                          ((1:n)[cluster.active])[-i])
                                })
@@ -163,7 +197,7 @@ clusterident.SMC <- function(x,...) {
         #&& k < 10
   ) {
     correlationMatrix <- cluster.correlation[cluster.active, cluster.active]
-    print(paste(k, sum(cluster.active), dim(correlationMatrix)))
+    loginfo(paste(k, sum(cluster.active), dim(correlationMatrix)))
     activate  <- (1:(2*n))[cluster.active]
     #bestPair <- which(correlationMatrix == max(correlationMatrix), arr.ind = TRUE)[1,] # wybieramy pierwszy to też jest źle
     bestPairList <- which(correlationMatrix == max(correlationMatrix), arr.ind = TRUE) # wybieramy pierwszy to też jest źle
@@ -178,8 +212,8 @@ clusterident.SMC <- function(x,...) {
     cluster.active[i] <- FALSE
     cluster.active[j] <- FALSE
     
-    bestCorrelation  <- get_correlations_cancor(
-      x$FIM,
+    bestCorrelation  <- x$CANCOR$get_correlations_cancor(
+      x$M,
       cluster.elementsrep[i, 1:cluster.sizerep[i]],
       cluster.elementsrep[j, 1:cluster.sizerep[j]])
     
@@ -213,11 +247,11 @@ clusterident.SMC <- function(x,...) {
     
     
     Zscore.K <- sapply(1:length(Z), function(z){
-      (1 - get_correlations_cancor(x$FIM, Z[z], Z[-z]))*x$gramm_norm[Z[z]]
+      (1 - x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z]))*x$gramm_norm[Z[z]]
     })
     
     Zscore.delta <- sapply(1:length(Z), function(z){
-      get_correlations_cancor(x$FIM, Z[z], Z[-z])
+      x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z])
     })
     
     if(x$rules.delta){
@@ -243,7 +277,7 @@ clusterident.SMC <- function(x,...) {
         ### Check correlation with other parameters 
         
         local.correlation <- sapply(remove, function(r){
-          get_correlations_cancor(x$FIM, 
+          x$CANCOR$get_correlations_cancor(x$M, 
                                   Z[r],
                                   parameters.activate[!parameters.activate %in% Z[r]])
         })
@@ -252,7 +286,7 @@ clusterident.SMC <- function(x,...) {
         
         if(sum(!parameters.activate %in% Z[remove]) > 0){
           local.correalation.out <-  sapply(remove, function(r){
-            get_correlations_cancor(x$FIM, 
+            x$CANCOR$get_correlations_cancor(x$M, 
                                     Z[r],
                                     parameters.activate[!parameters.activate %in% Z[remove]])
           })
@@ -261,7 +295,7 @@ clusterident.SMC <- function(x,...) {
         }
         ### sensitivity 
         
-        local.sensitivty <- diag(x$FIM)[Z[remove]]
+        local.sensitivty <- diag(x$M)[Z[remove]]
         remove <- remove[which(local.sensitivty == min(local.sensitivty))]#TODO czy wyrzucać max czy min
         
         ### sample
@@ -286,10 +320,10 @@ clusterident.SMC <- function(x,...) {
         } else {
           
           Zscore.delta <- sapply(1:length(Z), function(z){
-            get_correlations_cancor(x$FIM, Z[z], Z[-z])
+            x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z])
           })
           Zscore.K <- sapply(1:length(Z), function(z){
-            (1 - get_correlations_cancor(x$FIM, Z[z], Z[-z]))*x$gramm_norm[Z[z]]
+            (1 - x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z]))*x$gramm_norm[Z[z]]
           })
           cluster.redundancy[Z] <- Zscore.delta
           
@@ -307,7 +341,7 @@ clusterident.SMC <- function(x,...) {
     
     cluster.correlation[cluster.active, n+k] <- 
       sapply((1:(2*n))[cluster.active], function(i){
-        get_information_cancor(x$FIM,
+        x$CANCOR$get_information_cancor(x$M,
                                cluster.elementsrep[i, 1:cluster.sizerep[i]],
                                cluster.elementsrep[n+k, 1:cluster.sizerep[n+k]])
       }) 
@@ -352,18 +386,18 @@ cluster.SMC <- function(x,...) {
   k <- 0 # non-trival clusters constructed
   n <- length(x$labels)
   
-  get_information_cancor <- function(m, c1, c2) {
-    ### TODO wyczyść
-    infcontrol=0.99999
-    ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
-    mean(-log(1-min(infcontrol^2,ccor$cor*ccor$cor)))
-  }
-  
-  get_correlations_cancor <- function(m, c1, c2) {
-    ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
-    ccor$cor
-  }
-  
+#   get_information_cancor <- function(m, c1, c2) {
+#     ### TODO wyczyść
+#     infcontrol=0.99999
+#     ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
+#     mean(-log(1-min(infcontrol^2,ccor$cor*ccor$cor)))
+#   }
+#   
+#   get_correlations_cancor <- function(m, c1, c2) {
+#     ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
+#     ccor$cor
+#   }
+#   
   width     <- 0
   stability <- 0
   
@@ -392,7 +426,7 @@ cluster.SMC <- function(x,...) {
   cluster.correlation[1:n,1:n] <- sapply(1:n, function(i){
           sapply(1:n, function(j){
               ifelse(i < j, 
-                     get_information_cancor(x$FIM,
+                     x$CANCOR$get_information_cancor(x$M,
                                             cluster.elementsrep[i, 1:cluster.sizerep[i]],
                                             cluster.elementsrep[j, 1:cluster.sizerep[j]]),
                      -Inf)
@@ -414,8 +448,8 @@ cluster.SMC <- function(x,...) {
     cluster.active[i] <- FALSE
     cluster.active[j] <- FALSE
     
-    bestCorrelation  <- get_correlations_cancor(
-                            x$FIM,
+    bestCorrelation  <- x$CANCOR$get_correlations_cancor(
+                            x$M,
                             cluster.elementsrep[i, 1:cluster.sizerep[i]],
                             cluster.elementsrep[j, 1:cluster.sizerep[j]])
 
@@ -448,7 +482,7 @@ cluster.SMC <- function(x,...) {
     Z  <- c(ZL,ZR)
     
     Zscore <- sapply(1:length(Z), function(z){
-                get_correlations_cancor(x$FIM, Z[z], Z[-z])
+      x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z])
               })
   
     if(max(Zscore) > x$delta){
@@ -470,7 +504,7 @@ cluster.SMC <- function(x,...) {
         } else {
           
         Zscore <- sapply(1:length(Z), function(z){
-            get_correlations_cancor(x$FIM, Z[z], Z[-z])
+          x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z])
           })
         cluster.redundancy[Z] <- Zscore
         
@@ -485,7 +519,7 @@ cluster.SMC <- function(x,...) {
     
     cluster.correlation[cluster.active, n+k] <- 
       sapply((1:(2*n))[cluster.active], function(i){
-             get_information_cancor(x$FIM,
+        x$CANCOR$get_information_cancor(x$M,
                                     cluster.elementsrep[i, 1:cluster.sizerep[i]],
                                     cluster.elementsrep[n+k, 1:cluster.sizerep[n+k]])
     }) 
@@ -755,16 +789,16 @@ redundancy.SMC <- function(x,
                            cluster,
                            order.cluster  =  TRUE
 ){
-  get_correlations_cancor <- function(m, c1, c2) {
-    ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
-    ccor$cor
-  }
+#   get_correlations_cancor <- function(m, c1, c2) {
+#     ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
+#     ccor$cor
+#   }
   order <- cluster$order
   if( !order.cluster ){
     order <- 1:length(x$labels_all) 
   }
   sapply(1:length(order), function(i){
-    get_correlations_cancor(x$FIM, order[i], order[-i])
+    x$CANCOR$get_correlations_cancor(x$FIM, order[i], order[-i])
   })
 }
 

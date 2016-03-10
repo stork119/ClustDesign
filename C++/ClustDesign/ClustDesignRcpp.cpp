@@ -2,13 +2,14 @@
 
 //[[Rcpp::export]]
 vector<vector<double> > ClustDesign(
-	vector<double> p,
+	vector<double> pp,
  	vector<double> y,
 	vector<double> dydt,
 	double dt, 
 	vector<double> trange,
 	string dir_odesolve,
-	string dir_sm){
+	string dir_sm,
+	bool save_solutions){
 
  	/* Model input */
 //	vector<double> p = {  10.f, 20.f,  3.f, 0.6f };
@@ -34,11 +35,14 @@ vector<vector<double> > ClustDesign(
 		_dydt[i] = dydt[i];
 	}
 
-	Model m = Model(_y, _dydt, p, trange, dt);
+	Model m = Model(_y, _dydt, pp, trange, dt);
 	compute_sensitvity_matrix(m);
-
-	m.write_odesolve_y(dir_odesolve);
-	m.write_sensitivity_matrix(dir_sm);
+	
+	if(save_solutions)
+	{
+		m.write_odesolve_y(dir_odesolve);
+		m.write_sensitivity_matrix(dir_sm);
+	}
 
 	m.create_sensitivity_matrix();
 
