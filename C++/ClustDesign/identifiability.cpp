@@ -1,4 +1,5 @@
 #include "identifiability.h"
+#include <pthread.h>
 
 
 void compute_sensitvity_matrix(Model &m)
@@ -25,6 +26,7 @@ void compute_sensitvity_matrix(Model &m)
 			m.get_trange(),
 			m.get_dt(),
 			[&](const state_type &_z, const double _t) {m.observer_odesolve_dydp(_z, _t, i); });
+		pthread_testcancel();
 	}
 
 }
@@ -58,5 +60,6 @@ void odesolve_dzdt(const state_type &z, state_type &dzdt, double t, Model &m, in
 			//myfileJy << t << '\t' << '\t' << i << '\t' << j << '\t' << y[j] << '\t' << J(i, j)*y[j] << endl;
 		}
 	}
+	pthread_testcancel();
 
 }

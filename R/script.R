@@ -15,7 +15,7 @@ compileSourceCode <- function(
 #  PKG_CXXFLAGS = "-I/usr/lib/R/include -I/usr/lib/R/site-library/Rcpp/include -I/usr/lib/R/site-library/RInside/include -ggdb -O2 -pipe -fdebug-prefix-map=/pub/devel/R/R-3.1.3-1.x86_64/build=/usr/src/debug/R-3.1.3-1 -fdebug-prefix-map=/pub/devel/R/R-3.1.3-1.x86_64/src/R-3.1.3=/usr/src/debug/R-3.1.3-1 -std=c++11 -I/cygdrive/d/KN/ClustSense/ClustDesign/C++/ClustDesign/",
 # PKG_LIBS     = "-s  -L/cygdrive/d/KN/ClustSense/ClustDesign/C++/ClustDesign/ -lmetamodel -lidentifiability -L/cygdrive/d/KN/ClustSense/ClustDesign/C++/ClustDesign/models/GE/ -lmodel" 
   PKG_CXXFLAGS="-ID:/KN/ClustSense/ClustDesign/C++/ClustDesign/ -IC:/R/R-3.2.3/include -IC:/R/R-3.2.3/include/x64 -IC:/R/R-3.2.3/library/Rcpp/include -IC:/R/R-3.2.3/library/RInside/include -O2 -Wall -mtune=core2 -std=c++11",
-  PKG_LIBS="-s  -LD:/KN/ClustSense/ClustDesign/C++/ClustDesign/ -lmetamodel -lidentifiability -LD:/KN/ClustSense/ClustDesign/C++/ClustDesign/models/GE/ -lmodel"
+  PKG_LIBS="-s  -LD:/KN/ClustSense/ClustDesign/C++/ClustDesign/ -lmetamodel -lidentifiability -LD:/KN/ClustSense/ClustDesign/C++/ClustDesign/models/GE/ -lmodel -pthread"
 
 ){
 
@@ -46,14 +46,16 @@ identifiability <- function(exp,
 			    y = c(501, 1005),
 			    dydt = c(0,0),
 			    dt   = 0.1,
-			    to   = 12,
+			    to   = 120,
 			    from = 0,
 			    by.num = 1000,
 			    save_solutions = FALSE, 
 			    labels = paste("p", 1:length(p), sep = ""),
                             names = labels,
 			    zeta = 1,
-			    delta = 0.95)
+			    delta = 0.95, 
+			    time_interval = 500,
+			    time_computation = 1000*60*5)
  {
   if(compile){
     compileSourceCode(source_cpp_filename = source_cpp_filename)
@@ -67,25 +69,31 @@ identifiability <- function(exp,
  trange <- seq(from = from,
                 to = to,
                 by = (to-from)/by.num)
-  l <- ClustDesign(p = p,
+  l <- ClustDesignPthread(p = p,
                    y = y,
                    dydt = dydt,
                    dt = dt,
                    trange = trange,
                    dir_odesolve = dir.odesolve,
                    dir_sm = dir.sm,
-		   save_solutions = save_solutions)
-  x <- SMC(
-	S =  matrix(data = unlist(l), ncol = 4, byrow=TRUE), 
+		   save_solutions = save_solutions,
+		   time_interval = time_interval,
+		   time_computation = time_computation
+	)
+  if(l$success == 1){
+    x <- SMC(
+	S =  matrix(data = unlist(l$sm),
+			 ncol = 4,
+			 byrow=TRUE), 
 	labels = labels,
 	names = names,
 	zeta = zeta,
 	delta = delta,
 	dir.output = dir.model.exp )
 	
-  cluster <- clusterident.SMC(x)
+    cluster <- clusterident.SMC(x)
   
-  if(save_solutions){
+    if(save_solutions){
 	directory.dendrogram <- paste(dir.model.exp, "dendrogram", ".pdf", sep = "")
 	pdf(directory.dendrogram, width = 12, height = 6)
 	plotDendogram.SMC(x,
@@ -95,9 +103,12 @@ identifiability <- function(exp,
                   labels.args = list(cex = 0.5)
 	)
 	dev.off()
-  }
+    }
 
-  return(cluster)
+    return(cluster)
+  } else {
+    return(-1)
+  }
 }
 
 
