@@ -20,8 +20,6 @@ source("SACluster.R")
 
 delta            <- 0.95
 zeta             <- 1
-K                <- 10
-rules.delta      <- TRUE
 
 directory.models <- '../../Models/'
 
@@ -40,28 +38,7 @@ directory.params <- paste(directory.models,
                           'NFkB/Input/parameters_names.csv',
                           sep = "")
 
-#### JAKSTATGB EXAMPLE ####
-directory.folder <- paste(directory.models,
-                          'JAKSTATGB/',
-                          sep = "")
-directory.SM     <- paste(directory.folder,
-                          'Output/Experiment_Jaccobo/sense.csv',
-                          sep = "")
-directory.FIM     <- paste(directory.folder,
-                          'Output/Experiment_Jaccobo/FIM.csv',
-                          sep = "")
-directory.output <- paste(directory.folder,
-                          'Output/Experiment_Jaccobo/',
-                          "clustering/",
-                          'delta/',
-                          '/', 
-                          sep = "")
-directory.params <- paste(directory.folder,
-                          'Input/parameters_names.csv',
-                          sep = "")
-
-#### MAIN CODE ####
-dir.create(path = directory.output, recursive = TRUE)
+dir.create(path = directory.output, recursive = TRUE, showWarnings = FALSE)
 
 SM <- as.matrix(read.csv(directory.SM, sep = "\t", header = FALSE))
 params <- read.csv(directory.params, header = FALSE, sep = "\t") ## HORIZONTAL
@@ -70,17 +47,92 @@ if( ncol(SM) != nrow(params)){
   print("Error. Wrong number of parameters")
 }
 
-x <- SMC(FIM = x$FIM_all,
+x <- SMC(S = SM, 
          labels = t(params),
          names = t(params),
          zeta = zeta,
-         delta = delta)
+         delta = delta,
+         dir.output =directory.output )
 
-# write.table(x = x$FIM_all, 
-#           file= directory.FIM,
-#             col.names = FALSE,
-#           row.names = FALSE,
-#           sep = "\t")
+
+#### JAKSTATGB EXAMPLE ####
+directory.folder <- paste(directory.models,
+                          'JAKSTATGB/',
+                          sep = "")
+directory.SM     <- paste(directory.folder,
+                          'Output/Experiment_Jaccobo/sense.csv',
+                          sep = "")
+
+directory.output <- paste(directory.folder,
+                          'Output/Experiment_Jaccobo/',
+                          "clustering-2/",
+                          'delta/',
+                          '/', 
+                          sep = "")
+directory.params <- paste(directory.folder,
+                          'Input/parameters_names.csv',
+                          sep = "")
+
+dir.create(path = directory.output, recursive = TRUE, showWarnings = FALSE)
+
+SM <- as.matrix(read.csv(directory.SM, sep = "\t", header = FALSE))
+params <- read.csv(directory.params, header = FALSE, sep = "\t") ## HORIZONTAL
+
+if( ncol(SM) != nrow(params)){
+  print("Error. Wrong number of parameters")
+}
+
+x <- SMC(S = SM, 
+  labels = t(params),
+  names = t(params),
+  zeta = zeta,
+  delta = delta,
+  dir.output =directory.output )
+
+
+#### NFKB EXAMPLE ####
+directory.folder <- paste(directory.models,
+                          'tjetka/Output/',
+                          sep = "")
+directory.SM     <- paste(directory.folder, 'sense.csv', sep = "")
+directory.FIM     <- paste(directory.folder, 'FIM.csv', sep = "")
+directory.output.SM <- paste(directory.folder,
+                          "clustering/",
+                          'SM',
+                          '/', 
+                          sep = "")
+directory.output.FIM <- paste(directory.folder,
+                          "clustering/",
+                          'FIM',
+                          '/', 
+                          sep = "")
+
+# case SM
+dir.create(path = directory.output.SM, recursive = TRUE, showWarnings =   FALSE)
+SM <- as.matrix(read.csv(directory.SM, sep = "\t", header = FALSE))
+
+x.SM <- SMC(S = SM, 
+  zeta = zeta,
+  delta = delta,
+  dir.output =directory.output.SM )
+
+directory.output <- directory.output.SM
+x <- x.SM
+
+# case FIM
+dir.create(path = directory.output.FIM, recursive = TRUE, showWarnings = FALSE)
+FIM <- as.matrix(read.csv(directory.FIM, sep = "\t", header = FALSE))
+
+x.FIM <- SMC(FIM = FIM, 
+            zeta = zeta,
+            delta = delta,
+            dir.output =directory.output.FIM )
+
+directory.output <- directory.output.FIM
+x <- x.FIM
+
+
+#### MAIN CODE ####
 
 cluster <- clusterident.SMC(x)
 

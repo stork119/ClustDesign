@@ -7,7 +7,8 @@ require("logging")
 require("spatstat")
 require("fields")
 
-wd <- dirname(parent.frame(2)$ofile)
+#wd <- dirname(parent.frame(2)$ofile)
+wd <- "D:/KN/ClustSense/ClustDesign/R//Identifiability/"
 source(paste(wd,"/CanonicalCorrelation/CANCOR.R", sep = ""))
 rm(wd)
 
@@ -38,10 +39,15 @@ SMC <- function(S      = NULL,
   removeHandler(names(getLogger()[['handlers']])) 
   dir.log.folder <- paste(dir.output, "logs/",sep = "")
   dir.create(dir.log.folder, recursive = TRUE, showWarnings = FALSE) 
-  dir.log.file <- gsub(":", "-",
-                       gsub(" ", "-",
-                            paste(dir.log.folder, Sys.time(), ".log",sep = ""),
-                            fixed = TRUE),
+  dir.log.file <- gsub(" ",
+                       "-",
+                       paste( dir.log.folder,
+                              gsub( ":", 
+                                    "-", 
+                                    Sys.time(), 
+                                    fixed = TRUE), 
+                              ".log", 
+                              sep = ""),
                        fixed = TRUE)
 
   basicConfig(level = "FINEST")
@@ -189,12 +195,12 @@ clusterident.SMC <- function(x,...) {
                                  x$CANCOR$get_correlations_cancor(x$M,
                                                          i,
                                                          ((1:n)[cluster.active])[-i])
-                               })
+                                })
   
-  
+ 
   #liczymy najpierw wszystko ze wszystkim :)
   while(k < n - 1
-        #&& k < 10
+       # && k < 1
   ) {
     correlationMatrix <- cluster.correlation[cluster.active, cluster.active]
     loginfo(paste(k, sum(cluster.active), dim(correlationMatrix)))
@@ -268,9 +274,12 @@ clusterident.SMC <- function(x,...) {
         
         ### ### ### ### ### ### ### ###
         if(x$rules.delta){
+          
           remove <- which(Zscore.delta == max(Zscore.delta)) ### local
+          loginfo(paste(("REDUCE: Zscore.delta"), Zscore.delta, remove))
         } else {
           remove <- which(Zscore.K == max(Zscore.K)) ### local
+          loginfo(paste(("REDUCE: Zscore.K"), Zscore.K, remove))
         }
         
         #remove <- which(Zscore == max(Zscore)) ### local
@@ -282,6 +291,9 @@ clusterident.SMC <- function(x,...) {
                                   parameters.activate[!parameters.activate %in% Z[r]])
         })
         remove <- remove[which(local.correlation == max(local.correlation))]
+        
+        loginfo(paste(("REDUCE: Correlations"), local.correlation, remove))
+        
         ### local out of thrown
         
         if(sum(!parameters.activate %in% Z[remove]) > 0){
@@ -292,21 +304,25 @@ clusterident.SMC <- function(x,...) {
           })
         
           remove <- remove[which(local.correalation.out == max(local.correalation.out))]
+          loginfo(paste(("REDUCE: local out of thrown"), local.correalation.out, remove))
+      
         }
         ### sensitivity 
         
-        local.sensitivty <- diag(x$M)[Z[remove]]
+        local.sensitivty <- diag(x$FIM)[Z[remove]]
         remove <- remove[which(local.sensitivty == min(local.sensitivty))]#TODO czy wyrzucać max czy min
+        loginfo(paste(("REDUCE: local sensitivity"), local.sensitivty, remove))
         
         ### sample
         if(length(remove) > 1){
           parameters.weakness[Z[remove]] <- parameters.weakness[Z[remove]] + 1
         }
-        smp <- sample(remove, 1)
         remove <- remove[sample(1:length(remove), 1)]
-        parameters.activate <- parameters.activate[!parameters.activate %in% Z[remove]]
+        loginfo(paste(("REDUCE: sampling"),  remove))
+        
         ### ### ### ### ### ### ### ### ostateczne usuwanie
 
+        parameters.activate <- parameters.activate[!parameters.activate %in% Z[remove]]
         Z      <- Z[-remove]
         
         if(remove > length(ZL)){
