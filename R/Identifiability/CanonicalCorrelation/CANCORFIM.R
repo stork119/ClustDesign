@@ -1,7 +1,12 @@
+# Implementation from internet.
+# License GPL
 #### CANCOR FIM #### 
+
 CANCOR.FIM <- function(){
   # Description :
-  # 
+  # Class CANCOR.FIM inherits from class CANCOR.
+  # Class implements function that calculate canonical correaltion for input
+  # being Fisher Information Matrix
   # Parameters  :
   #
   
@@ -9,7 +14,10 @@ CANCOR.FIM <- function(){
   cancorFIM  <-function(covin, xin, yin){
 
     # functions calculates cononical correlations from the FIM
-    # input: FIM, inices of set A, indices of set B
+    # Parameters:
+    # covin -- FIM,
+    # xin   -- indices from matrix covin that denoting set A,
+    # yin   -- indices from matrix covin that denoting set B
 
     eps=10^{-6} # defining  numerical zero
     
@@ -72,7 +80,7 @@ CANCOR.FIM <- function(){
   get_information_cancor <- function(m,
                                                c1,
                                                c2) {
-    ### TODO wyczyść
+    ###TODO - set as class parameter
     infcontrol=0.99999
     ccor = cancorFIM(m, c1, c2)
     mean(-log(1-min(infcontrol^2,ccor$cor*ccor$cor)))
@@ -81,8 +89,9 @@ CANCOR.FIM <- function(){
   get_correlations_cancor <- function(m,
                                                 c1,
                                                 c2) {
-    # returns vector of cannonical correlations between components c1 and c2 of the matrix m
+    # Function returns vector of cannonical correlations between components c1 and c2 of the matrix m
     # this is interface function for easier use of CanCor_FIM
+    ###TODO - set as class parameter
     one=0.9999999999 #numerical 1
     ccor = cancorFIM(m,c1,c2)
     ccor=pmin(as.vector(ccor$cor),one)

@@ -1,7 +1,7 @@
 #### CANCOR #### 
 
-source(paste(wd,"/CanonicalCorrelation/CANCORSM.R", sep = ""))
-source(paste(wd,"/CanonicalCorrelation/CANCORFIM.R", sep = ""))
+source(paste(dirname(parent.frame(2)$ofile),"/CANCORSM.R", sep = ""))
+source(paste(dirname(parent.frame(2)$ofile),"/CANCORFIM.R", sep = ""))
 
 
 CANCOR <- function(type = NULL,
@@ -9,7 +9,7 @@ CANCOR <- function(type = NULL,
                    get_information_cancor  = NULL,
                    get_correlations_cancor = NULL){
   # Description :
-  # 
+  # Abstract class consisitng declaration of functions for calculating canonical correaltions 
   # Parameters  :
   #
   

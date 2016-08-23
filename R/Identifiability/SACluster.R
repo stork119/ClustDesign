@@ -1,14 +1,27 @@
 #####################################
-### Sensitivity Matrix Clustering ###
+### Sensitivity Matrix Clustering
+### GPL license
+### Authors:
+### -- Michal Wlodarczyk
+### -- Karol Nienaltowski - corresponding author
+### -- Michal Komorowski
 #####################################
 
-### checking libraries ###
-require("logging")
-require("spatstat")
-require("fields")
+### libraries ###
+try({package.list <- list("logging","spatstat", "fields")
+package.load <- sapply(package.list, function(package.name){
+  package.exist <- require(package.name, character.only = TRUE)
+  if(!package.exist){
+    install.packages(package.name)
+    return(library(package.name, character.only = TRUE))
+  }
+  return(package.exist)
+})
+})
 
-#wd <- dirname(parent.frame(2)$ofile)
-wd <- "D:/KN/ClustSense/ClustDesign/R//Identifiability/"
+
+wd <- dirname(parent.frame(2)$ofile) # cannot be used in RStudio !
+#wd <- "D:/KN/ClustSense/ClustDesign/R//Identifiability/" 
 source(paste(wd,"/CanonicalCorrelation/CANCOR.R", sep = ""))
 rm(wd)
 
@@ -24,16 +37,60 @@ SMC <- function(S      = NULL,
                 dir.output = "~/"
                 ){
   # Description :
-  # none
+    # Class that implements functions for clustering and identifiability analysis of parameters
+    # in the model for which we are able to compute Fisher Information Matrix and/or
+    # Sensitivity Matrix.
   # Parameters  :
-  # S  - sensitivity matrix; columns are defined parameters; rows are realisations of sensitivities procedure
-  # FIM         - Fisher Information Matrix
-  # labels      - ids of parameters 
-  # names       - names of parameters 
-  # zeta        - according to 
-  # delta       - 
-  # K           - not used
-  # rules.delta  - TRUE !
+    # S          - optional - if S is null then FIM is required
+    #            - sensitivity matrix; columns correspond to parameters; 
+    #            - rows are realisations of sensitivities procedure
+    #            - For ODE model with three parameters p1, p2 and p3 and
+    #      two variables y1 and y2 defined as :
+    #      dy1/dt = y1(t, y1, y2, p1, p2, p3)
+    #      dy2/dt = y2(t, y1, y2, p1, p2, p3) 
+    #      observed in times t1, t2, ..., tk
+    #      S = [ dy1(t1)/dp1  dy1(t1)/dp2 dy1(t1)/dp3]
+    #          [ dy2(t1)/dp1  dy2(t1)/dp2 dy2(t1)/dp3]
+    #          [ dy1(t2)/dp1  dy1(t2)/dp2 dy1(t2)/dp3]
+    #          [ dy2(t2)/dp1  dy2(t2)/dp2 dy2(t2)/dp3]
+    #          ...
+    #          [ dy1(tk)/dp1  dy1(tk)/dp2 dy1(tk)/dp3]
+    #          [ dy2(tk)/dp1  dy2(tk)/dp2 dy2(tk)/dp3]
+    # FIM         - optional - if FIM is null then S is required
+    #             - Fisher Information Matrix = S^(T)*(S)
+    # labels      - ids   of parameters 
+    # names       - names of parameters 
+    # zeta        - identifiability parameter according to article [1]
+    # delta       - identifiability parameter according to article [1]
+    # K           - identifiability parameter (not used in this version)
+    # rules.delta - TRUE !
+    # dir.output  - default folder of output
+  # Return :
+    # SMC class object with parameters
+    # ind        - indices of sensitive parameters
+    # S_all      - Sensitivity Matrix
+    #            - null if in the input S was null
+    # S          - Sensitivity Matrix reduced to sensitive parameters
+    #            - null if in the input S was null
+    #            - S = S_all[,ind]
+    #            - null if in the input S was null
+    # FIM_all    - Fisher Information Matrix
+    # FIM        - Fisher Information Matrix reduced to sensitive parameters
+    #            - FIM = FIM_all[ind, ind]
+    # M          - S or FIM depending on class input
+    #            - if as an input user set S then M = S,  M = FIM otherwise
+    # labels     - parameters ids reduced to sensitive parameters
+    # labels_all - parameters ids
+    # names      - parameters names used in plots reduced to sensitive parameters
+    # names_all  - parameters names used in plots 
+    # zeta 
+    # delta 
+    # rules.delta 
+    # K   
+    # rules.K 
+    # call       = sys.call(),
+    # CANCOR     - object of class CANCOR  consisitng functions for calculating
+    #              canonical correaltions 
   
   ### LOGGING
   removeHandler(names(getLogger()[['handlers']])) 
@@ -111,7 +168,7 @@ SMC <- function(S      = NULL,
               call = sys.call(),
               CANCOR = CANCOR)
   class(val) <- "SMC"
-  val
+  return(val)
 }
 print.SMC <- function(x,...){
   loginfo("FIM")
@@ -128,31 +185,28 @@ info.SMC <- function(x,...){
 #### clusterident ####
 clusterident.SMC <- function(x,...) {
   # Definition :
-  # function make clustering 
+  # Non-trival clustering function basing on canonical correlations between set of 
+  # sensitivity vectors.
   # Parameters : none
-  # Return     : clustering object
-  # n - liczba partametrów
-  # m - macierz wrażliwości
+  # Return     : clustering object (hclust)
+  # n - parameters number
+  # m - sensitivity matrix
+  # ATTENTION 
+  # - if number of sensitive parameters is low code may throw errors, 
+  #   it was not completly debugged
+  # - there must be at least two sensitive parameters
   
-  k <- 0 # non-trival clusters constructed
+  
+  k <- 0 
   n <- length(x$labels)
   
+  
+  ## normalization of grammian 
   x$gramm_norm <- diag(x$FIM)#^2/sum(diag(x$FIM)^2)
   
   parameters.activate <- 1:n
   parameters.weakness <- rep(x = 0, times = n)
   
-#   get_information_cancor <- function(m, c1, c2) {
-#     ### TODO wyczyść
-#     infcontrol=0.99999
-#     ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
-#     mean(-log(1-min(infcontrol^2,ccor$cor*ccor$cor)))
-#   }
-#   
-#   get_correlations_cancor <- function(m, c1, c2) {
-#     ccor <- cancor(m[,c1], m[,c2], FALSE, FALSE)
-#     ccor$cor
-#   }
   
   width     <- 0
   stability <- 0
@@ -160,12 +214,15 @@ clusterident.SMC <- function(x,...) {
   cluster.size      <- c(rep(x=1, times=n), rep(x=0, times=n))
   cluster.sizerep   <- c(rep(x=1, times=n), rep(x=0, times=n))
   
+  ## cluster.active - tells ids of active clusters i.e. clusters that in this step are leafs
+  #                 - cluster.correlation[cluster.active, cluster.active] - matrix of correlations
+  #                   between clusters in current clustering step
   cluster.active    <- c(rep(x=TRUE, times=n), rep(x=FALSE, times=n))
   
   cluster.representant    <- c(1:n, rep(x=0, times=n))
   cluster.name      <- c(-(1:n), rep(x=0, times=n))
   cluster.hist      <- array(0, c(n-1, 2))
-  cluster.level     <- array(0, 2 * n) # how many merges have been done in cluster
+  cluster.level     <- array(0, 2 * n)   # how many merges have been done in cluster
   cluster.merge_type  <- array(0, n - 1) # array to store additional info about merges
   cluster.d_measure   <- array(0, n-1)
   cluster.heights     <- array(0, n-1)
@@ -177,8 +234,10 @@ clusterident.SMC <- function(x,...) {
   cluster.elementsrep  <- array(0, c(2 * n, n)) # list of elements
   cluster.elementsrep[,1] <- c(1:n, rep(x=0, times=n))
   
-  cluster.correlation <- array(-Inf, c(2 * n, 2 * n))
-  
+  ## cluster.correlation - correlation between clusters
+  ##                     - in the first step cluster == parameters
+  ##                     - array of size 2 * n, 2 * n beacuse of number of clustering steps
+  cluster.correlation <- array(-Inf, c(2 * n, 2 * n)) 
   cluster.correlation[1:n,1:n] <- sapply(1:n, function(i){
     sapply(1:n, function(j){
       ifelse(i < j, 
@@ -190,33 +249,42 @@ clusterident.SMC <- function(x,...) {
     })
   })
   
-  global.correlation <- sapply(1:n, 
-                               function(i){
-                                 x$CANCOR$get_correlations_cancor(x$M,
-                                                         i,
-                                                         ((1:n)[cluster.active])[-i])
-                                })
+  ## global.correlation - correlation with all parameters
+  # global.correlation <- sapply(1:n, 
+  #                              function(i){
+  #                                x$CANCOR$get_correlations_cancor(x$M,
+  #                                                        i,
+  #                                                        ((1:n)[cluster.active])[-i])
+  #                               })
   
- 
-  #liczymy najpierw wszystko ze wszystkim :)
+
+  ## clustering procedure - n - 1 steps
   while(k < n - 1
        # && k < 1
   ) {
+    
     correlationMatrix <- cluster.correlation[cluster.active, cluster.active]
     loginfo(paste(k, sum(cluster.active), dim(correlationMatrix)))
+    
+    ## indices of active clusters
     activate  <- (1:(2*n))[cluster.active]
-    #bestPair <- which(correlationMatrix == max(correlationMatrix), arr.ind = TRUE)[1,] # wybieramy pierwszy to też jest źle
-    bestPairList <- which(correlationMatrix == max(correlationMatrix), arr.ind = TRUE) # wybieramy pierwszy to też jest źle
-    # pierwsza metoda losujemy
+    
+    ## Choosing pair if clusters with the highest correlation between them (best)
+    #  - if there are pairs with equal correlation value random pair is chosen
+    #bestPair <- which(correlationMatrix == max(correlationMatrix), arr.ind = TRUE)[1,]
+    bestPairList <- which(correlationMatrix == max(correlationMatrix), arr.ind = TRUE)
     bestPair <- bestPairList[sample(1:nrow(bestPairList), 1),]
     
     bestInformation  <- correlationMatrix[bestPair[1], bestPair[2]]
     
+    ## numbers of clusters with the highest correlation
     i <- activate[bestPair[1]]
     j <- activate[bestPair[2]]
     
+    ## best clusters gonna be merged -- they are not leafs (not active) anymore
     cluster.active[i] <- FALSE
     cluster.active[j] <- FALSE
+    
     
     bestCorrelation  <- x$CANCOR$get_correlations_cancor(
       x$M,
@@ -230,7 +298,8 @@ clusterident.SMC <- function(x,...) {
     cluster.merge_type[k] <- 1#sum(best_cor[1]> delta) #1 #CHANGED
     
     
-    # updating tree's statistics
+    ### updating tree's statistics
+    
     width <- width + cluster.size[i] * cluster.size[j]
     #stability <- stability + 1/( max(cluster.heights[i] + 1, cluster.heights[j]+1)) * bestInformation
     
@@ -283,6 +352,7 @@ clusterident.SMC <- function(x,...) {
         }
         
         #remove <- which(Zscore == max(Zscore)) ### local
+        
         ### Check correlation with other parameters 
         
         local.correlation <- sapply(remove, function(r){
@@ -310,7 +380,7 @@ clusterident.SMC <- function(x,...) {
         ### sensitivity 
         
         local.sensitivty <- diag(x$FIM)[Z[remove]]
-        remove <- remove[which(local.sensitivty == min(local.sensitivty))]#TODO czy wyrzucać max czy min
+        remove <- remove[which(local.sensitivty == min(local.sensitivty))]
         loginfo(paste(("REDUCE: local sensitivity"), local.sensitivty, remove))
         
         ### sample
@@ -364,7 +434,7 @@ clusterident.SMC <- function(x,...) {
     
     cluster.active[n+k] <- TRUE
     
-  } ### end of lo
+  } ### end of looop
   
   
   rep <- cluster.elementsrep[2*n-1,1:cluster.sizerep[2*n-1]]
@@ -384,190 +454,19 @@ clusterident.SMC <- function(x,...) {
                   rep = rep,
                   redundancy = cluster.redundancy,
                   identifiability = identifiability,
-                  weakness = parameters.weakness
-  )
+                  weakness = parameters.weakness)
+  
   class(cluster) = "hclust" 
-  cluster
-}
-
-#### cluster ####
-cluster.SMC <- function(x,...) {
-  # Definition :
-  # function make clustering 
-  # Parameters : none
-  # Return     : clustering object
-  # n - liczba partametrów
-  # m - macierz wrażliwości
-  
-  k <- 0 # non-trival clusters constructed
-  n <- length(x$labels)
-  
-#   get_information_cancor <- function(m, c1, c2) {
-#     ### TODO wyczyść
-#     infcontrol=0.99999
-#     ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
-#     mean(-log(1-min(infcontrol^2,ccor$cor*ccor$cor)))
-#   }
-#   
-#   get_correlations_cancor <- function(m, c1, c2) {
-#     ccor = cancor(m[,c1], m[,c2], FALSE, FALSE)
-#     ccor$cor
-#   }
-#   
-  width     <- 0
-  stability <- 0
-  
-  cluster.size      <- c(rep(x=1, times=n), rep(x=0, times=n))
-  cluster.sizerep   <- c(rep(x=1, times=n), rep(x=0, times=n))
-  
-  cluster.active    <- c(rep(x=TRUE, times=n), rep(x=FALSE, times=n))
-  
-  cluster.representant    <- c(1:n, rep(x=0, times=n))
-  cluster.name      <- c(-(1:n), rep(x=0, times=n))
-  cluster.hist      <- array(0, c(n-1, 2))
-  cluster.level     <- array(0, 2 * n) # how many merges have been done in cluster
-  cluster.merge_type  <- array(0, n - 1) # array to store additional info about merges
-  cluster.d_measure   <- array(0, n-1)
-  cluster.heights     <- array(0, n-1)
-  
-  cluster.redundancy  <- array(1, n)
-  
-  cluster.elements  <- array(0, c(2 * n, n)) # list of elements
-  cluster.elements[,1] <- c(1:n, rep(x=0, times=n))
-  cluster.elementsrep  <- array(0, c(2 * n, n)) # list of elements
-  cluster.elementsrep[,1] <- c(1:n, rep(x=0, times=n))
-  
-  cluster.correlation <- array(-Inf, c(2 * n, 2 * n))
-  
-  cluster.correlation[1:n,1:n] <- sapply(1:n, function(i){
-          sapply(1:n, function(j){
-              ifelse(i < j, 
-                     x$CANCOR$get_information_cancor(x$M,
-                                            cluster.elementsrep[i, 1:cluster.sizerep[i]],
-                                            cluster.elementsrep[j, 1:cluster.sizerep[j]]),
-                     -Inf)
-          })
-        })
-  
-  #liczymy najpierw wszystko ze wszystkim :)
-  while(k < n - 1 
-        ) {
-
-    correlationMatrix <- cluster.correlation[cluster.active, cluster.active]
-    activate  <- (1:(2*n))[cluster.active]
-    bestPair <- which(correlationMatrix == max(correlationMatrix), arr.ind = TRUE)[1,]
-    bestInformation  <- correlationMatrix[bestPair[1], bestPair[2]]
-    
-    i <- activate[bestPair[1]]
-    j <- activate[bestPair[2]]
-    
-    cluster.active[i] <- FALSE
-    cluster.active[j] <- FALSE
-    
-    bestCorrelation  <- x$CANCOR$get_correlations_cancor(
-                            x$M,
-                            cluster.elementsrep[i, 1:cluster.sizerep[i]],
-                            cluster.elementsrep[j, 1:cluster.sizerep[j]])
-
-    k <- k + 1   
-    
-    cluster.hist[k,]      <- c(cluster.name[i], cluster.name[j])
-    cluster.heights[k]    <- max(cluster.level[i], cluster.level[j]) + mean(1 - bestCorrelation*bestCorrelation)
-    cluster.merge_type[k] <- 1#sum(best_cor[1]> delta) #1 #CHANGED
-    
-
-    # updating tree's statistics
-    width <- width + cluster.size[i] * cluster.size[j]
-    stability <- stability + 1/( max(cluster.heights[i] + 1, cluster.heights[j]+1)) * bestInformation
-    
-    cluster.size[n + k]    <- cluster.size[i] + cluster.size[j]
-    cluster.sizerep[n + k] <- cluster.sizerep[i] + cluster.sizerep[j]
-    
-    cluster.level[n + k]   <- max(cluster.level[i], cluster.level[j]) + mean(1-bestCorrelation*bestCorrelation)
-    
-    cluster.name[n + k]      <- k;
-    cluster.elements[n + k,] <- c(cluster.elements[i, 1:cluster.size[i]],
-                                  cluster.elements[j, 1:cluster.size[j]],
-                                  array(0, n - cluster.size[i] - cluster.size[j]))
-    cluster.elementsrep[n + k,] <- c(cluster.elementsrep[i, 1:cluster.sizerep[i]],
-                                 cluster.elementsrep[j, 1:cluster.sizerep[j]],
-                                 array(0, n - cluster.sizerep[i]- cluster.sizerep[j]))
-    
-    ZL <- c(cluster.elementsrep[i, 1:cluster.sizerep[i]])
-    ZR <- c(cluster.elementsrep[j, 1:cluster.sizerep[j]])
-    Z  <- c(ZL,ZR)
-    
-    Zscore <- sapply(1:length(Z), function(z){
-      x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z])
-              })
-  
-    if(max(Zscore) > x$delta){
-      #select representant
-      ile <- 1
-      while(ile && length(ZL) > 0 && length(ZR) > 0){
-        
-        remove <- which.max(Zscore)
-        Z      <- Z[-remove]
-        
-        if(remove > length(ZL)){
-          ZR <- ZR[-(remove - length(ZL))]						
-        } else {				
-          ZL <- ZL[-remove]				
-        }
-        
-        if(length(ZL) == 0 || length(ZR) == 0){		
-          ile <- 0
-        } else {
-          
-        Zscore <- sapply(1:length(Z), function(z){
-          x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z])
-          })
-        cluster.redundancy[Z] <- Zscore
-        
-        ile <- ifelse( max(Zscore) > x$delta, 1, 0 )
-
-        }
-      }
-      
-      cluster.elementsrep[n + k,] <- c(Z, array(0, n - length(Z)))
-      cluster.sizerep[n + k] <- length(Z)		
-    }
-    
-    cluster.correlation[cluster.active, n+k] <- 
-      sapply((1:(2*n))[cluster.active], function(i){
-        x$CANCOR$get_information_cancor(x$M,
-                                    cluster.elementsrep[i, 1:cluster.sizerep[i]],
-                                    cluster.elementsrep[n+k, 1:cluster.sizerep[n+k]])
-    }) 
-    
-    cluster.active[n+k] <- TRUE
-    
-  }
-  
-  # construcing a - clustering object
-  cluster <- list(merge  = cluster.hist,
-                  height = cluster.heights,
-                  order  = cluster.elements[2 * n - 1,], # the order is constructed not to make lines cross in dendrogram
-                  labels = x$labels,
-                  representant = cluster.representant,
-                  width = width,
-                  stability  = stability,
-                  d_measure = cluster.d_measure,
-                  merge_type = cluster.merge_type,
-                  rep = cluster.elementsrep[2*n-1,1:cluster.sizerep[2*n-1]],
-                  redundancy = cluster.redundancy
-                  )
-  class(cluster) = "hclust" 
-  cluster
+  return(cluster)
 }
 
 #### plot ####
 plot.SMC <- function(x,
                      ...,
                      cluster) {
-  # n - liczba parametrów
-  # m - macierz wrażliwości
-  # labels - parametry 
+  # n - parameters number 
+  # m - sensitivity matrix
+  # labels - parameters names 
   # delta - delta
   
   plotDendogram.SMC(x, cluster=cluster, fig=c(0,0.75,0.4,1))
