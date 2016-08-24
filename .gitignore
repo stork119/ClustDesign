@@ -1,6 +1,7 @@
 # History files
 .Rhistory
 .Rapp.history
+.RData
 
 # Example code in package build process
 *-Ex.R
@@ -14,7 +15,10 @@ vignettes/*.pdf
 
 #Output
 /Output/*
+*.csv
+*.png
+*.pdf
 
 #vim
-*.swp
-*.swo
+.swp
+.swo

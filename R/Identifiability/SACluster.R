@@ -60,9 +60,10 @@ SMC <- function(S      = NULL,
     #             - Fisher Information Matrix = S^(T)*(S)
     # labels      - ids   of parameters 
     # names       - names of parameters 
-    # zeta        - identifiability parameter according to article [1]
-    # delta       - identifiability parameter according to article [1]
-    # K           - identifiability parameter (not used in this version)
+    # zeta        - sensitivity threshold parameter according to article [1]
+    # delta       - identifiability threshold parameter according to article [1]
+    # K           - identifiability threshold parameter according to
+    #               supplement to article [1] (not used in this version)
     # rules.delta - TRUE !
     # dir.output  - default folder of output
   # Return :
@@ -83,11 +84,11 @@ SMC <- function(S      = NULL,
     # labels_all - parameters ids
     # names      - parameters names used in plots reduced to sensitive parameters
     # names_all  - parameters names used in plots 
-    # zeta 
-    # delta 
-    # rules.delta 
-    # K   
-    # rules.K 
+    # zeta       - sensitivity threshold
+    # delta      - identifiability threshold 
+    # rules.delta - functions for identifiabilty analysis
+    # K          - identifiability threshold 
+    # rules.K    - functions for identifiabilty analysis
     # call       = sys.call(),
     # CANCOR     - object of class CANCOR  consisitng functions for calculating
     #              canonical correaltions 
@@ -182,20 +183,32 @@ info.SMC <- function(x,...){
   loginfo("FIM end")
 }
 
-#### clusterident ####
+#### Clustering function ####
 clusterident.SMC <- function(x,...) {
   # Definition :
   # Non-trival clustering function basing on canonical correlations between set of 
   # sensitivity vectors.
   # Parameters : none
+    # n - parameters number
+    # m - sensitivity matrix
   # Return     : clustering object (hclust)
-  # n - parameters number
-  # m - sensitivity matrix
+    # merge  
+    # height 
+    # order  
+    # labels 
+    # representant 
+    # width 
+    # stability 
+    # d_measure 
+    # merge_type 
+    # rep 
+    # redundancy 
+    # identifiability 
+    # weakness
   # ATTENTION 
   # - if number of sensitive parameters is low code may throw errors, 
   #   it was not completly debugged
   # - there must be at least two sensitive parameters
-  
   
   k <- 0 
   n <- length(x$labels)
@@ -204,12 +217,13 @@ clusterident.SMC <- function(x,...) {
   ## normalization of grammian 
   x$gramm_norm <- diag(x$FIM)#^2/sum(diag(x$FIM)^2)
   
+  ## stability and weakness are parameters that were used to calucalte some 
+  #  statistcs/heurystics during clustering process
+  stability <- 0
+  width     <- 0
+  
   parameters.activate <- 1:n
   parameters.weakness <- rep(x = 0, times = n)
-  
-  
-  width     <- 0
-  stability <- 0
   
   cluster.size      <- c(rep(x=1, times=n), rep(x=0, times=n))
   cluster.sizerep   <- c(rep(x=1, times=n), rep(x=0, times=n))
@@ -285,7 +299,7 @@ clusterident.SMC <- function(x,...) {
     cluster.active[i] <- FALSE
     cluster.active[j] <- FALSE
     
-    
+    ## statistics of best clusters
     bestCorrelation  <- x$CANCOR$get_correlations_cancor(
       x$M,
       cluster.elementsrep[i, 1:cluster.sizerep[i]],
@@ -298,8 +312,7 @@ clusterident.SMC <- function(x,...) {
     cluster.merge_type[k] <- 1#sum(best_cor[1]> delta) #1 #CHANGED
     
     
-    ### updating tree's statistics
-    
+    ## updating tree's statistics
     width <- width + cluster.size[i] * cluster.size[j]
     #stability <- stability + 1/( max(cluster.heights[i] + 1, cluster.heights[j]+1)) * bestInformation
     
@@ -320,7 +333,6 @@ clusterident.SMC <- function(x,...) {
     ZR <- c(cluster.elementsrep[j, 1:cluster.sizerep[j]])
     Z  <- c(ZL,ZR)
     
-    
     Zscore.K <- sapply(1:length(Z), function(z){
       (1 - x$CANCOR$get_correlations_cancor(x$M, Z[z], Z[-z]))*x$gramm_norm[Z[z]]
     })
@@ -335,26 +347,40 @@ clusterident.SMC <- function(x,...) {
       ile <- ifelse(max(Zscore.K) < x$K, 1, 0 )
     }
     
-    if(ile){#x$delta){
-      #select representant
-      #TU trzeba wybierać
-      
+    ## Removing non identifiable parameters from merged cluster !
+    #  - maximizing subset of parameters with identifible parameters within this subset
+    #  - non-identifible parameters are removed from cluster 
+    #  - Removing parameters procedure consist of a couple steps
+    #    (1) Zscore reduction :
+    #        Choose parameters with the biggest Zscore value according to one of two conditions:
+    #        - delta condition
+    #        - K condition
+    #    (2) Local correlation condition :
+    #        Calculate correlation between parameters in cluster (locally).
+    #        Choose parameter that have the largest local correlation
+    #    (3) Local out of thrown correlation condition : 
+    #        Calculate correlation between parameters in cluster (locally), 
+    #        that in previous steps were chosen to remove
+    #        Choose parameter that have the largest local correlation
+    #    (4) Sensitivity condition :
+    #        Choose parameter with the lowest sensitivity
+    #    (5) Sampling condition :
+    #        Sample parameter to remove
+    
+    if(ile){
+  
       while(ile && length(ZL) > 0 && length(ZR) > 0){
         
-        ### ### ### ### ### ### ### ###
+        ## Removing parameters procedure - (1)
         if(x$rules.delta){
-          
           remove <- which(Zscore.delta == max(Zscore.delta)) ### local
-          loginfo(paste(("REDUCE: Zscore.delta"), Zscore.delta, remove))
+          loginfo(paste(("REDUCE: Zscore reduction Zscore.delta"), Zscore.delta, remove))
         } else {
           remove <- which(Zscore.K == max(Zscore.K)) ### local
-          loginfo(paste(("REDUCE: Zscore.K"), Zscore.K, remove))
+          loginfo(paste(("REDUCE: Zscore reduction Zscore.K"), Zscore.K, remove))
         }
         
-        #remove <- which(Zscore == max(Zscore)) ### local
-        
-        ### Check correlation with other parameters 
-        
+        ## Removing parameters procedure - (2)
         local.correlation <- sapply(remove, function(r){
           x$CANCOR$get_correlations_cancor(x$M, 
                                   Z[r],
@@ -362,10 +388,9 @@ clusterident.SMC <- function(x,...) {
         })
         remove <- remove[which(local.correlation == max(local.correlation))]
         
-        loginfo(paste(("REDUCE: Correlations"), local.correlation, remove))
+        loginfo(paste(("REDUCE: Local correlation condition"), local.correlation, remove))
         
-        ### local out of thrown
-        
+        ## Removing parameters procedure - (3)
         if(sum(!parameters.activate %in% Z[remove]) > 0){
           local.correalation.out <-  sapply(remove, function(r){
             x$CANCOR$get_correlations_cancor(x$M, 
@@ -374,24 +399,25 @@ clusterident.SMC <- function(x,...) {
           })
         
           remove <- remove[which(local.correalation.out == max(local.correalation.out))]
-          loginfo(paste(("REDUCE: local out of thrown"), local.correalation.out, remove))
+          loginfo(paste(("REDUCE: Local out of thrown correlation condition"), local.correalation.out, remove))
       
         }
-        ### sensitivity 
         
+        ## Removing parameters procedure - (4)
         local.sensitivty <- diag(x$FIM)[Z[remove]]
         remove <- remove[which(local.sensitivty == min(local.sensitivty))]
-        loginfo(paste(("REDUCE: local sensitivity"), local.sensitivty, remove))
+        loginfo(paste(("REDUCE: Sensitivity condition"), local.sensitivty, remove))
         
-        ### sample
+        ## We check number of parameters chosen for removing using conditions (1-4)
         if(length(remove) > 1){
           parameters.weakness[Z[remove]] <- parameters.weakness[Z[remove]] + 1
         }
-        remove <- remove[sample(1:length(remove), 1)]
-        loginfo(paste(("REDUCE: sampling"),  remove))
         
-        ### ### ### ### ### ### ### ### ostateczne usuwanie
-
+        ## Removing parameters procedure - (5)
+        remove <- remove[sample(1:length(remove), 1)]
+        loginfo(paste(("REDUCE: Sampling condition"),  remove))
+        
+        ## Removing parameters procedure & updating tree
         parameters.activate <- parameters.activate[!parameters.activate %in% Z[remove]]
         Z      <- Z[-remove]
         
@@ -434,14 +460,13 @@ clusterident.SMC <- function(x,...) {
     
     cluster.active[n+k] <- TRUE
     
-  } ### end of looop
-  
+  }
   
   rep <- cluster.elementsrep[2*n-1,1:cluster.sizerep[2*n-1]]
   identifiability <- rep(0, length(x$names_all))
   identifiability[x$ind][rep] <- rep(1, length(rep))
   
-  # construcing a - clustering object
+  ## hclust object
   cluster <- list(merge  = cluster.hist,
                   height = cluster.heights,
                   order  = cluster.elements[2 * n - 1,], # the order is constructed not to make lines cross in dendrogram
@@ -455,8 +480,8 @@ clusterident.SMC <- function(x,...) {
                   redundancy = cluster.redundancy,
                   identifiability = identifiability,
                   weakness = parameters.weakness)
-  
   class(cluster) = "hclust" 
+  
   return(cluster)
 }
 
@@ -520,7 +545,7 @@ barplot.SMC <- function(x,
             labels.args.default))
 }
 
-#### sa ####
+#### Sensitivity analysis ####
 sa.SMC <- function(x,
                    ...,
                    cluster,
