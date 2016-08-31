@@ -89,27 +89,35 @@ void Metamodel::write_odesolve_y(string filename)
 	file.close();
 }
 
+/* create odesolve matrix */
+void Metamodel::create_odesolve_matrix()
+{
+	for (vector<pair<double, state_type>>::iterator it = odesolve_y.begin(); it != odesolve_y.end(); ++it)
+	{
+		vector<double> odesolve_matrix_row;
+		//file << it->first << '\t';
+		for (int j = 0; j < state_value; ++j)
+		{
+			odesolve_matrix_row.push_back(it->second[j]);
+		}
+		odesolve_matrix.push_back(odesolve_matrix_row);
+	}
+}
 
 /* write sensitivity matrix */
 void Metamodel::write_sensitivity_matrix(string filename)
 {
-	std::sort(odesolve_dydp.begin(), odesolve_dydp.end());
+//	std::sort(odesolve_dydp.begin(), odesolve_dydp.end());
 	ofstream file;
 	file.open(filename);
 
-	for (vector<pair<pair<double, int>, state_type>>::iterator it = odesolve_dydp.begin(); it != odesolve_dydp.end(); it += get_parameters_number())
+	for (vector<vector<double> >::iterator sm_row = sm.begin(); sm_row != sm.end(); ++sm_row)
 	{
-		for (int i_var = 0; i_var < state_value; ++i_var)
+		for (int i_par = 0; i_par < get_parameters_number(); ++i_par)
 		{
-			//file << (it->first).first << '\t' << i_var << '\t';
-			for (int i_par = 0; i_par < get_parameters_number(); ++i_par)
-			{
-				file << (it->second)[i_var] * get_parameter(i_par) << '\t';
-				++it;
-			}
-			file << endl;
-			it -= get_parameters_number();
+			file << (*sm_row)[i_par] << '\t';
 		}
+		file << endl;
 	}
 	file.close();
 }
@@ -118,6 +126,10 @@ void Metamodel::write_sensitivity_matrix(string filename)
 /* write sensitivity matrix */
 void Metamodel::create_sensitivity_matrix()
 {
+	if(normalize)
+	{	
+		find_max_odesolve();
+	}
 	std::sort(odesolve_dydp.begin(), odesolve_dydp.end());
 
 	for (vector<pair<pair<double, int>, state_type>>::iterator it = odesolve_dydp.begin(); it != odesolve_dydp.end(); it += get_parameters_number())
@@ -127,12 +139,60 @@ void Metamodel::create_sensitivity_matrix()
 			vector<double> sm_row;
 			for (int i_par = 0; i_par < get_parameters_number(); ++i_par)
 			{
-				sm_row.push_back((it->second)[i_var] * get_parameter(i_par));
-				++it;
-			}
+				if(normalize)
+				{
+					sm_row.push_back((it->second)[i_var]/(odesolve_max[i_var]) * get_parameter(i_par));
+//					cout << odesolve_max[i_var] << '\t'; 
+				}
+				else 
+				{	
+					sm_row.push_back((it->second)[i_var] * get_parameter(i_par));
+				}
+++it;			}
+//			cout << endl;
 			sm.push_back(sm_row);
 			it -= get_parameters_number();
 		}
+	}
+}
+
+
+/* write sensitivity matrix */
+void Metamodel::find_max_odesolve()
+{
+
+	for (int i_var = 0; i_var < state_value; ++i_var)
+	{		
+	
+		odesolve_max.push_back(0.f);
+//		cout << "ODESOLVE" << endl;
+	}
+
+	if(normalize){
+		for (vector<pair<double, state_type>>::iterator it = odesolve_y.begin(); it != odesolve_y.end(); ++it )
+		{
+			for (int i_var = 0; i_var < state_value; ++i_var)
+			{	
+				odesolve_max[i_var] = std::max(odesolve_max[i_var], it->second[i_var]);
+//				cout << odesolve_max[i_var] << '\t'<<	it->second[i_var] << '\t';
+
+			}
+//			cout << endl;
+		}
+	
+		/*for (vector<pair<pair<double, int>, state_type>>::iterator it = odesolve_dydp.begin(); it != odesolve_dydp.end(); ++it)
+		{
+			for (int i_var = 0; i_var < state_value; ++i_var)
+			{
+				cout << i_var << '\t' << odesolve_max[i_var] << '\t'<<	it->second[i_var] << '\t';
+
+				(it->second)[i_var] /= odesolve_max[i_var];
+
+				cout << odesolve_max[i_var] << '\t'<<	it->second[i_var] << '\t';
+
+			}
+				cout << endl;
+		}*/
 	}
 }
 

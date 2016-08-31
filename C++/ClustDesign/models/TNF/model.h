@@ -24,6 +24,6 @@ public:
 	matrix_type jacobiandpar(const state_type &_y, const double _t);
 	matrix_type jacobiandvar(const state_type &_y, const double _t);
 
-	double stimulus(double _t) const;
-	
+	double stimulus(double _t) const; 
+
 };

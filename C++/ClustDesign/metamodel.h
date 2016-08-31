@@ -13,10 +13,13 @@ protected:
 	parameters_type p;
 	std::vector<double> trange;
 	double dt;
+	bool normalize;
 
 	vector<pair<double, state_type>>  odesolve_y;
 	vector<pair<pair<double, int>, state_type>>  odesolve_dydp;
 	vector<vector<double> >  sm;
+	vector<vector<double> >  odesolve_matrix;
+	vector<double> odesolve_max;
 
 
 public:
@@ -26,7 +29,8 @@ public:
 		state_type &_dydt,
 		parameters_type &_p,
 		std::vector<double> &_trange,
-		double _dt) : y(_y), dydt(_dydt), p(_p), trange(_trange), dt(_dt) {};
+		double _dt,
+		bool _normalize) : y(_y), dydt(_dydt), p(_p), trange(_trange), dt(_dt), normalize(_normalize) {};
 
 	virtual ~Metamodel() {};
 
@@ -50,10 +54,20 @@ public:
 	{
 		return dt;
 	};
+	
+	inline bool get_normalize()
+	{
+		return normalize;
+	};
 
 	inline std::vector<vector<double> > get_sm()
 	{
 		return sm;
+	};
+
+	inline std::vector<vector<double> > get_odesolve_matrix()
+	{
+		return odesolve_matrix;
 	};
 
 
@@ -74,7 +88,11 @@ public:
 	vector<pair<pair<double, int>, state_type>> get_odesolve_dydp();
 	void write_sensitivity_matrix(string filename);
 
+	void find_max_odesolve();
+
 	void create_sensitivity_matrix();
+	void create_odesolve_matrix();
+
 
 
 	/* Parameters */

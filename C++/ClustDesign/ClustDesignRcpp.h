@@ -1,4 +1,6 @@
-/*** TODO Model including !!!***/#include <Rcpp.h>
+/*** TODO Model including !!!***/
+#include <Rcpp.h>
+
 #include <iostream>
 #include <algorithm>
 
@@ -10,8 +12,6 @@
 #include "odeint.h"
 #include "identifiability.h"
 
-#include <Rcpp.h>
-
 using namespace std;
 using namespace Rcpp;
 
@@ -20,7 +20,8 @@ vector<vector<double> > ClustDesign(
  	vector<double> y,
 	vector<double> dydt,
 	double dt, 
-	vector<double> trange,
+	vector<double> trange,	
+	bool normalize,
 	string dir_odesolve,
 	string dir_sm,
 	bool save_solutions);

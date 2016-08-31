@@ -1,7 +1,7 @@
 # History files
-.Rhistory
-.Rapp.history
-.RData
+*.Rhistory
+*.Rapp.history
+*.RData
 
 # Example code in package build process
 *-Ex.R
@@ -20,5 +20,12 @@ vignettes/*.pdf
 *.pdf
 
 #vim
-.swp
-.swo
+*.swp
+*.swo
+
+#visualstudio
+*.sdf
+
+#cpp
+*.o
+*.exe
