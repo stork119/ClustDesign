@@ -1,0 +1,11 @@
+par1 3288.7  "s1 phosphorylation rate"
+par2 0.045722 "S1 dimerisation rate"
+par3 0.4 "S1 nuclear translocation rate"
+par4 0.5 "2.640399 S1 dephosphorylation rate "
+par5 1.000000 "stimulant level"
+par6 750000 "K_d for STAT1 phosporylation"
+par7 0.08 "k+"
+par8 0.032265 "k-"
+par9 0.6 "rate of endocytosis"
+par10 0.01 " degradation rate of endocytosed receptors"
+
