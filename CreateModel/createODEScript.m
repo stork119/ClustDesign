@@ -34,3 +34,13 @@ parn = 4;  % number of parameters
 stimn = 0;
 
 createODE(name, varn, parn, stimn)
+
+
+%%
+clear;              %resets all
+name = 'JAKSTAT'; % Model name
+varn = 17; % number of variables
+parn = 10;  % number of parameters
+stimn = 1;
+
+createODE(name, varn, parn, stimn)
